@@ -1,0 +1,21 @@
+[
+  {
+    "deployment_id": "checkout-v2.4",
+    "service": "checkout-api",
+    "deployed_at": "2026-08-03T14:02:00Z",
+    "author": "deepshika",
+    "changes": [
+      "Added retry wrapper around DB writes",
+      "Bumped connection pool size"
+    ]
+  },
+  {
+    "deployment_id": "checkout-v2.3",
+    "service": "checkout-api",
+    "deployed_at": "2026-07-29T09:11:00Z",
+    "author": "rahul",
+    "changes": [
+      "Fixed currency rounding bug"
+    ]
+  }
+]

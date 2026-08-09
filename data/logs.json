@@ -1,0 +1,20 @@
+[
+  {
+    "t": "2026-08-03T14:09:40Z",
+    "service": "checkout-api",
+    "level": "ERROR",
+    "message": "DB write timeout after 3 retries (pool exhausted)"
+  },
+  {
+    "t": "2026-08-03T14:11:02Z",
+    "service": "checkout-api",
+    "level": "ERROR",
+    "message": "DB write timeout after 3 retries (pool exhausted)"
+  },
+  {
+    "t": "2026-08-03T14:07:55Z",
+    "service": "checkout-api",
+    "level": "INFO",
+    "message": "checkout-v2.4 rollout complete on 6/6 pods"
+  }
+]

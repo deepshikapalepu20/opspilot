@@ -1,0 +1,10 @@
+[
+  {
+    "incident_id": "INC-104",
+    "title": "Checkout latency spike after retry-wrapper deploy",
+    "service": "checkout-api",
+    "root_cause": "A DB retry wrapper amplified load during a brief connection pool exhaustion, causing p95 latency to jump 5x.",
+    "resolution": "Rolled back the deploy; later fixed by adding exponential backoff and a circuit breaker.",
+    "date": "2026-05-12"
+  }
+]
