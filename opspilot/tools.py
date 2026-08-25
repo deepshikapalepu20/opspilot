@@ -1,28 +1,76 @@
 import json
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime
 
+
+# ============================================================
+# DATA DIRECTORY
+# ============================================================
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
+# ============================================================
+# DEFAULT INVESTIGATION WINDOW
+# ============================================================
+
+DEFAULT_START = "2026-08-03T14:00:00Z"
+DEFAULT_END = "2026-08-03T14:20:00Z"
+DEFAULT_DEPLOYMENT_SINCE = "2026-08-01T00:00:00Z"
+
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
 def _load_json(filename: str):
     path = DATA_DIR / filename
+
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def _parse_time(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    """
+    Safely parse an ISO8601 timestamp.
 
+    Empty or invalid timestamps are rejected with a clear
+    error instead of causing an unhandled server exception.
+    """
+
+    if not value or not value.strip():
+        raise ValueError(
+            "Timestamp cannot be empty."
+        )
+
+    try:
+        return datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        )
+
+    except ValueError:
+        raise ValueError(
+            f"Invalid ISO8601 timestamp: {value}"
+        )
+
+
+# ============================================================
+# METRICS TOOL
+# ============================================================
 
 def query_metrics(
     service: str,
     metric: str,
-    start: str,
-    end: str,
+    start: str | None = None,
+    end: str | None = None,
 ):
+
     data = _load_json("metrics.json")
+
+    # Use project investigation window if the LLM
+    # fails to provide valid dates.
+    start = start or DEFAULT_START
+    end = end or DEFAULT_END
 
     if service not in data:
         return {
@@ -40,12 +88,22 @@ def query_metrics(
             "error": "Unknown metric",
         }
 
-    start_dt = _parse_time(start)
-    end_dt = _parse_time(end)
+    try:
+        start_dt = _parse_time(start)
+        end_dt = _parse_time(end)
+
+    except ValueError as e:
+        return {
+            "service": service,
+            "metric": metric,
+            "points": [],
+            "error": str(e),
+        }
 
     points = []
 
     for point in data[service][metric]:
+
         timestamp = _parse_time(point["t"])
 
         if start_dt <= timestamp <= end_dt:
@@ -60,21 +118,40 @@ def query_metrics(
     }
 
 
+# ============================================================
+# LOG SEARCH TOOL
+# ============================================================
+
 def search_logs(
     service: str,
-    start: str,
-    end: str,
+    start: str | None = None,
+    end: str | None = None,
     level: str | None = None,
     keyword: str | None = None,
 ):
+
     logs = _load_json("logs.json")
 
-    start_dt = _parse_time(start)
-    end_dt = _parse_time(end)
+    # Safe defaults for the static investigation dataset.
+    start = start or DEFAULT_START
+    end = end or DEFAULT_END
+
+    try:
+        start_dt = _parse_time(start)
+        end_dt = _parse_time(end)
+
+    except ValueError as e:
+        return {
+            "service": service,
+            "count": 0,
+            "logs": [],
+            "error": str(e),
+        }
 
     results = []
 
     for log in logs:
+
         if log["service"] != service:
             continue
 
@@ -86,7 +163,11 @@ def search_logs(
         if level and log["level"] != level:
             continue
 
-        if keyword and keyword.lower() not in log["message"].lower():
+        if (
+            keyword
+            and keyword.lower()
+            not in log["message"].lower()
+        ):
             continue
 
         results.append(log)
@@ -98,21 +179,41 @@ def search_logs(
     }
 
 
+# ============================================================
+# DEPLOYMENT SEARCH TOOL
+# ============================================================
+
 def get_deployments(
     service: str,
-    since: str,
+    since: str | None = None,
 ):
+
     deployments = _load_json("deployments.json")
 
-    since_dt = _parse_time(since)
+    # Prevent the LLM from sending an empty timestamp.
+    since = since or DEFAULT_DEPLOYMENT_SINCE
+
+    try:
+        since_dt = _parse_time(since)
+
+    except ValueError as e:
+        return {
+            "service": service,
+            "count": 0,
+            "deployments": [],
+            "error": str(e),
+        }
 
     results = []
 
     for deployment in deployments:
+
         if deployment["service"] != service:
             continue
 
-        deployed_at = _parse_time(deployment["deployed_at"])
+        deployed_at = _parse_time(
+            deployment["deployed_at"]
+        )
 
         if deployed_at >= since_dt:
             results.append(deployment)
@@ -124,10 +225,15 @@ def get_deployments(
     }
 
 
+# ============================================================
+# PREVIOUS INCIDENT SEARCH
+# ============================================================
+
 def search_incidents(
     keyword: str,
     service: str | None = None,
 ):
+
     incidents = _load_json("incidents.json")
 
     keyword_lower = keyword.lower()
@@ -135,15 +241,18 @@ def search_incidents(
     results = []
 
     for incident in incidents:
+
         if service and incident["service"] != service:
             continue
 
         searchable_text = (
-            incident["title"] + " " +
-            incident["root_cause"]
+            incident["title"]
+            + " "
+            + incident["root_cause"]
         ).lower()
 
         if keyword_lower in searchable_text:
+
             results.append(incident)
 
     return {
@@ -152,47 +261,66 @@ def search_incidents(
     }
 
 
+# ============================================================
+# RUNBOOK / RAG RETRIEVAL
+# ============================================================
+
 def retrieve_runbook(
     query: str,
     service: str | None = None,
 ):
-    runbooks_dir = DATA_DIR / "runbooks"
+    """
+    Retrieve operational knowledge using the RAG system.
 
-    if service:
-        filename = f"{service}.md"
-        path = runbooks_dir / filename
+    RAG searches across runbooks, troubleshooting guides,
+    architecture documents, and historical incidents.
 
-        if not path.exists():
-            return {
-                "service": service,
-                "content": "",
-                "error": "Runbook not found",
-            }
+    Retrieved knowledge is informational evidence only.
+    It does not directly execute remediation actions.
+    """
 
-        content = path.read_text(encoding="utf-8")
+    try:
+
+        from opspilot.rag.retriever import retrieve
+
+        result = retrieve(
+            query=query,
+            service=service,
+        )
+
+    except Exception as exc:
 
         return {
-            "service": service,
             "query": query,
-            "content": content,
+            "service": service,
+            "count": 0,
+            "chunks": [],
+            "error": (
+                f"RAG retrieval failed: {exc}"
+            ),
         }
-
-    results = []
-
-    for path in runbooks_dir.glob("*.md"):
-        content = path.read_text(encoding="utf-8")
-
-        if query.lower() in content.lower():
-            results.append({
-                "file": path.name,
-                "content": content,
-            })
 
     return {
         "query": query,
-        "results": results,
+        "service": service,
+        "count": result.get(
+            "count",
+            0,
+        ),
+        "chunks": result.get(
+            "chunks",
+            [],
+        ),
+        "query_used": result.get(
+            "query_used",
+            query,
+        ),
     }
 
+
+# ============================================================
+# INCIDENT REPORT CREATION
+# ============================================================
 
 def create_incident_report(
     incident_title: str,
@@ -202,6 +330,7 @@ def create_incident_report(
     recommended_action: str,
     requires_approval: bool,
 ):
+
     return {
         "incident_title": incident_title,
         "likely_root_cause": likely_root_cause,
@@ -213,18 +342,53 @@ def create_incident_report(
     }
 
 
+# ============================================================
+# REQUEST ROLLBACK
+# ============================================================
+
 def request_rollback(
     service: str,
     deployment_id: str,
     reason: str,
 ):
+
     return {
         "status": "approval_required",
+        "action": "rollback",
         "service": service,
         "deployment_id": deployment_id,
         "reason": reason,
         "message": (
-            "Rollback is a high-impact action and requires "
-            "human approval before execution."
+            "Rollback is a high-impact action and "
+            "requires human approval before execution."
+        ),
+    }
+
+
+# ============================================================
+# EXECUTE ROLLBACK
+# ============================================================
+
+def execute_rollback(
+    service: str,
+    deployment_id: str,
+):
+    """
+    Simulate execution of a deployment rollback.
+
+    This project currently uses static JSON operational
+    data, so this function does not modify a real
+    deployment or cloud environment.
+    """
+
+    return {
+        "status": "executed",
+        "action": "rollback",
+        "service": service,
+        "deployment_id": deployment_id,
+        "message": (
+            f"Rollback of deployment "
+            f"{deployment_id} for service "
+            f"{service} executed successfully."
         ),
     }
