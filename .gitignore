@@ -7,3 +7,18 @@ data/vector_store/
 *.log
 .pytest_cache/
 node_modules/
+# Development backups
+*_backup/
+*_backup.*
+*.backup
+
+# Local/generated evaluation output
+eval/latest_results.json
+
+# Temporary test scripts
+quick_rag_test.py
+# Generated investigation trajectories
+data/trajectories/
+# Local test scripts
+quick_agent_test.py
+quick_groq_test.py

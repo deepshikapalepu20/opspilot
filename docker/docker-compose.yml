@@ -1,0 +1,14 @@
+services:
+  opspilot-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: opspilot-api
+    ports:
+      - "8000:8000"
+    environment:
+      OLLAMA_URL: http://host.docker.internal:11434/api/chat
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

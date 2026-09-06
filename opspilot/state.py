@@ -31,6 +31,8 @@ class AgentState(TypedDict, total=False):
 
     evidence: list[dict[str, Any]]
 
+    selected_hypothesis: str | None
+
     # ========================================================
     # AGENT ITERATION
     # ========================================================
@@ -42,6 +44,34 @@ class AgentState(TypedDict, total=False):
     terminated: bool
 
     termination_reason: str | None
+
+    # ========================================================
+    # REASONING / REFLECTION
+    # ========================================================
+
+    reflection: dict[str, Any] | None
+
+    reflection_notes: list[str]
+
+    # ========================================================
+    # CONTROLLER GROUNDING
+    # ========================================================
+
+    controller_grounded: bool
+
+    controller_grounded_hypothesis: str | None
+
+    goal_evidence_status: str
+
+    # ========================================================
+    # CURRENT TOOL EXECUTION
+    # ========================================================
+
+    current_tool: str | None
+
+    current_tool_arguments: dict[str, Any] | None
+
+    last_tool_result: Any
 
     # ========================================================
     # HUMAN APPROVAL

@@ -11,7 +11,10 @@ from typing import Any
 # OLLAMA CONFIGURATION
 # ============================================================
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
+OLLAMA_URL = os.environ.get(
+    "OLLAMA_URL",
+    "http://localhost:11434/api/chat",
+)
 
 MODEL_NAME = "qwen2.5:3b-instruct"
 

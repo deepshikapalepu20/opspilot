@@ -24,18 +24,30 @@ The search query below returned weak or irrelevant
 results from an incident-knowledge base.
 
 Rewrite the query as a specific incident investigation
-query.
+query that will improve semantic vector search.
 
 Include:
 - service
 - symptoms
 - infrastructure/application component
 - operational failure mechanism
+- relevant investigation signals
+
+Rules:
+- Preserve important technical terms from the original query.
+- Write one natural-language search query.
+- Do NOT use negative search syntax.
+- Do NOT put a minus sign (-) before words.
+- Do NOT use Boolean operators such as AND, OR, NOT.
+- Do NOT remove important terms such as the service name,
+  component, symptom, or failure mechanism.
+- Do NOT add unrelated concepts.
+- The result should be a concise semantic-search query.
 
 Original query:
 {query}
 
-Return ONLY JSON:
+Return ONLY valid JSON:
 
 {{
     "reformulated_query": "..."

@@ -1,0 +1,16 @@
+.env
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+_backup
+_final_backup
+.pytest_cache
+.streamlit
+.vscode
+.idea
+*.log

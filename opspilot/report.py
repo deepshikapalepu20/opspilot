@@ -26,6 +26,30 @@ def _safe_confidence(value: Any) -> int:
     )
 
 
+def _clean_root_cause(
+    root_cause: str,
+) -> str:
+    """
+    Keep the controller-selected root cause clean.
+
+    Prevent accidental insertion of the investigation goal
+    into the root-cause statement.
+    """
+
+    if not isinstance(
+        root_cause,
+        str,
+    ):
+        return "Unknown root cause"
+
+    cleaned = root_cause.strip()
+
+    if not cleaned:
+        return "Unknown root cause"
+
+    return cleaned
+
+
 def _get_selected_hypothesis(
     state: dict[str, Any],
 ) -> tuple[str, int]:
@@ -770,10 +794,14 @@ Investigation context:
 Write a concise incident analysis with exactly these sections:
 
 ### 1. Root Cause
-State the controller-selected root cause clearly.
+State the controller-selected root cause exactly as provided.
 
-Do not replace the selected root cause with a historical
-incident from RAG.
+Do NOT append, insert, or modify the investigation goal
+inside the root-cause statement.
+
+The controller-selected root cause is authoritative:
+
+{root_cause}
 
 If the evidence establishes the mechanism but only suggests
 which deployment change contributed to it, say so explicitly.
@@ -871,6 +899,14 @@ def create_incident_report(
         _get_selected_hypothesis(
             state
         )
+    )
+
+    # --------------------------------------------------------
+    # SAFETY / REPORT SANITIZATION
+    # --------------------------------------------------------
+
+    likely_root_cause = _clean_root_cause(
+        likely_root_cause
     )
 
     # ========================================================

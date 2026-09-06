@@ -1,0 +1,13 @@
+{
+  "n_scenarios": 30,
+  "avg_tool_selection_accuracy": 0.992,
+  "avg_tool_argument_accuracy": 0.914,
+  "investigation_success_rate": 1.0,
+  "root_cause_accuracy": 1.0,
+  "avg_tool_calls": 4.2,
+  "avg_unnecessary_tool_calls": 1.0,
+  "loop_completion_rate": 1.0,
+  "approval_gating_correct_rate": 1.0,
+  "controller_grounding_rate": 1.0,
+  "avg_evidence_count": 1.0
+}

@@ -1,8 +1,8 @@
 [
   {
     "scenario_id": "SCN-001",
-    "goal": "Investigate the checkout-api latency spike after the latest deployment",
     "pattern": "deployment_correlation",
+    "goal": "Investigate the checkout-api latency spike after the latest deployment",
     "expected_root_cause_keywords": [
       "retry",
       "pool",
@@ -31,14 +31,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-002",
-    "goal": "Determine whether checkout-v2.4 caused the checkout-api degradation",
     "pattern": "deployment_correlation",
+    "goal": "Determine whether checkout-v2.4 caused the checkout-api degradation",
     "expected_root_cause_keywords": [
       "retry",
       "connection pool",
@@ -68,14 +85,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-003",
-    "goal": "Correlate the checkout-api performance regression with recent deployment activity",
     "pattern": "deployment_correlation",
+    "goal": "Correlate the checkout-api performance regression with recent deployment activity",
     "expected_root_cause_keywords": [
       "retry wrapper",
       "retry",
@@ -104,14 +138,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-004",
-    "goal": "Investigate whether a deployment introduced the database retry-related checkout-api failure",
     "pattern": "deployment_correlation",
+    "goal": "Investigate whether a deployment introduced the database retry-related checkout-api failure",
     "expected_root_cause_keywords": [
       "retry",
       "connection pool",
@@ -140,14 +191,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.9,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-005",
-    "goal": "Investigate checkout-api database connection pool exhaustion",
     "pattern": "pool_exhaustion",
+    "goal": "Investigate checkout-api database connection pool exhaustion",
     "expected_root_cause_keywords": [
       "pool exhausted",
       "connection pool"
@@ -171,14 +239,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.89,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-006",
-    "goal": "Determine why checkout-api database writes are timing out",
     "pattern": "db_timeout",
+    "goal": "Determine why checkout-api database writes are timing out",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhausted",
@@ -203,14 +288,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.89,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-007",
-    "goal": "Investigate repeated checkout-api database timeouts and determine the underlying resource issue",
     "pattern": "db_timeout",
+    "goal": "Investigate repeated checkout-api database timeouts and determine the underlying resource issue",
     "expected_root_cause_keywords": [
       "pool exhausted",
       "connection pool",
@@ -235,14 +337,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-008",
-    "goal": "Check whether database connection contention explains the checkout-api incident",
     "pattern": "pool_exhaustion",
+    "goal": "Check whether database connection contention explains the checkout-api incident",
     "expected_root_cause_keywords": [
       "pool exhausted",
       "connection pool"
@@ -266,14 +385,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.89,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-009",
-    "goal": "Investigate why checkout-api p95 latency increased during the incident window",
     "pattern": "latency_investigation",
+    "goal": "Investigate why checkout-api p95 latency increased during the incident window",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "connection pool",
@@ -302,14 +438,31 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-010",
-    "goal": "Determine the cause of the checkout-api p95 latency spike",
     "pattern": "latency_investigation",
+    "goal": "Determine the cause of the checkout-api p95 latency spike",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "DB write timeout",
@@ -334,14 +487,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-011",
-    "goal": "Investigate the relationship between elevated checkout-api latency and database failures",
     "pattern": "latency_investigation",
+    "goal": "Investigate the relationship between elevated checkout-api latency and database failures",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhausted",
@@ -366,14 +536,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-012",
-    "goal": "Assess whether the observed checkout-api latency increase is explained by DB timeouts",
     "pattern": "latency_investigation",
+    "goal": "Assess whether the observed checkout-api latency increase is explained by DB timeouts",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhaustion",
@@ -398,14 +585,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-013",
-    "goal": "Investigate the checkout-api error-rate spike",
     "pattern": "error_rate_investigation",
+    "goal": "Investigate the checkout-api error-rate spike",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhaustion",
@@ -430,14 +634,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-014",
-    "goal": "Determine why checkout-api errors increased during the incident",
     "pattern": "error_rate_investigation",
+    "goal": "Determine why checkout-api errors increased during the incident",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhausted",
@@ -466,14 +687,31 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-015",
-    "goal": "Correlate the checkout-api error-rate increase with database timeout failures",
     "pattern": "error_rate_investigation",
+    "goal": "Correlate the checkout-api error-rate increase with database timeout failures",
     "expected_root_cause_keywords": [
       "timeout",
       "pool exhausted",
@@ -498,14 +736,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-016",
-    "goal": "Diagnose the checkout-api error degradation using metrics and logs",
     "pattern": "error_rate_investigation",
+    "goal": "Diagnose the checkout-api error degradation using metrics and logs",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "DB write timeout",
@@ -530,14 +785,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-017",
-    "goal": "Investigate checkout-api latency and recover if the initial log search returns no useful evidence",
     "pattern": "query_reformulation",
+    "goal": "Investigate checkout-api latency and recover if the initial log search returns no useful evidence",
     "expected_root_cause_keywords": [
       "pool exhausted",
       "DB write timeout",
@@ -561,14 +833,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-018",
-    "goal": "Investigate checkout-api latency while accounting for the absence of logs containing the word latency",
     "pattern": "empty_observation_recovery",
+    "goal": "Investigate checkout-api latency while accounting for the absence of logs containing the word latency",
     "expected_root_cause_keywords": [
       "pool exhausted",
       "timeout",
@@ -593,14 +882,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-019",
-    "goal": "Investigate checkout-api degradation and distinguish the Redis connection failure from the primary DB issue",
     "pattern": "red_herring",
+    "goal": "Investigate checkout-api degradation and distinguish the Redis connection failure from the primary DB issue",
     "expected_root_cause_keywords": [
       "DB write timeout",
       "pool exhausted",
@@ -624,14 +930,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-020",
-    "goal": "Determine whether the checkout-api cache failure or database pool exhaustion better explains the incident",
     "pattern": "contradictory_evidence",
+    "goal": "Determine whether the checkout-api cache failure or database pool exhaustion better explains the incident",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "DB write timeout",
@@ -655,14 +978,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.88,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-021",
-    "goal": "Find a historical incident matching checkout-api database retries and connection-pool exhaustion",
     "pattern": "historical_incident",
+    "goal": "Find a historical incident matching checkout-api database retries and connection-pool exhaustion",
     "expected_root_cause_keywords": [
       "INC-104",
       "retry-wrapper",
@@ -677,14 +1017,31 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_incidents",
+      "search_logs",
+      "query_metrics",
+      "get_deployments"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.5,
+    "unnecessary_tool_calls": 3,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-022",
-    "goal": "Determine whether a previous checkout-api incident had the same retry-wrapper failure mode",
     "pattern": "historical_incident",
+    "goal": "Determine whether a previous checkout-api incident had the same retry-wrapper failure mode",
     "expected_root_cause_keywords": [
       "INC-104",
       "retry-wrapper",
@@ -699,14 +1056,31 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_incidents",
+      "search_logs",
+      "query_metrics",
+      "get_deployments"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 3,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-023",
-    "goal": "Compare the current checkout-api database retry symptoms with known historical incidents",
     "pattern": "historical_incident",
+    "goal": "Compare the current checkout-api database retry symptoms with known historical incidents",
     "expected_root_cause_keywords": [
       "INC-104",
       "retry",
@@ -721,14 +1095,32 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_incidents",
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.5,
+    "unnecessary_tool_calls": 3,
+    "tool_calls_total": 5,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-024",
-    "goal": "Use the checkout-api runbook to investigate database pool exhaustion",
     "pattern": "runbook_grounding",
+    "goal": "Use the checkout-api runbook to investigate database pool exhaustion",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "connection pool",
@@ -758,14 +1150,32 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "retrieve_runbook",
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.91,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 5,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-025",
-    "goal": "Retrieve operational guidance relevant to the checkout-api retry and timeout failure",
     "pattern": "runbook_grounding",
+    "goal": "Retrieve operational guidance relevant to the checkout-api retry and timeout failure",
     "expected_root_cause_keywords": [
       "retry",
       "pool exhaustion",
@@ -780,14 +1190,32 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "retrieve_runbook",
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.5,
+    "unnecessary_tool_calls": 3,
+    "tool_calls_total": 5,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-026",
-    "goal": "Ground the checkout-api investigation in relevant operational runbook knowledge before recommending action",
     "pattern": "runbook_grounding",
+    "goal": "Ground the checkout-api investigation in relevant operational runbook knowledge before recommending action",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "retry",
@@ -810,14 +1238,32 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "retrieve_runbook",
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.86,
+    "unnecessary_tool_calls": 2,
+    "tool_calls_total": 5,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-027",
-    "goal": "Determine whether the available checkout-api metrics and logs provide enough evidence for diagnosis",
     "pattern": "evidence_sufficiency",
+    "goal": "Determine whether the available checkout-api metrics and logs provide enough evidence for diagnosis",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "DB write timeout",
@@ -842,14 +1288,31 @@
         "end": "2026-08-03T14:20:00Z"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 1,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-028",
-    "goal": "Assess whether the evidence supports a confident root-cause conclusion rather than an unsupported guess",
     "pattern": "evidence_validation",
+    "goal": "Assess whether the evidence supports a confident root-cause conclusion rather than an unsupported guess",
     "expected_root_cause_keywords": [
       "pool exhaustion",
       "DB write timeout",
@@ -878,14 +1341,31 @@
         "service": "checkout-api"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 1.0,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 4
   },
   {
     "scenario_id": "SCN-029",
-    "goal": "Investigate the checkout-api incident and determine whether rollback of checkout-v2.4 should be recommended",
     "pattern": "approval_required",
+    "goal": "Investigate the checkout-api incident and determine whether rollback of checkout-v2.4 should be recommended",
     "expected_root_cause_keywords": [
       "retry",
       "pool exhaustion",
@@ -920,14 +1400,31 @@
         "deployment_id": "checkout-v2.4"
       }
     },
+    "tools_called": [
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 0.75,
+    "tool_argument_accuracy": 0.83,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 4,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "awaiting_human_approval",
     "requires_approval_expected": true,
-    "expected_termination": "awaiting_human_approval",
-    "service": "checkout-api"
+    "requires_approval_actual": true,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 5
   },
   {
     "scenario_id": "SCN-030",
-    "goal": "Perform a complete evidence-grounded investigation of checkout-api using metrics, logs, deployment history, historical incidents, and operational guidance",
     "pattern": "full_investigation",
+    "goal": "Perform a complete evidence-grounded investigation of checkout-api using metrics, logs, deployment history, historical incidents, and operational guidance",
     "expected_root_cause_keywords": [
       "retry",
       "pool exhaustion",
@@ -967,8 +1464,27 @@
         "query": "database retry connection pool"
       }
     },
+    "tools_called": [
+      "retrieve_runbook",
+      "search_incidents",
+      "search_logs",
+      "query_metrics",
+      "get_deployments",
+      "search_logs"
+    ],
+    "tool_selection_accuracy": 1.0,
+    "tool_argument_accuracy": 0.86,
+    "unnecessary_tool_calls": 0,
+    "tool_calls_total": 6,
+    "investigation_completed": true,
+    "root_cause_correct": true,
+    "loop_completed_cleanly": true,
+    "termination_reason": "reported",
     "requires_approval_expected": false,
-    "expected_termination": "reported",
-    "service": "checkout-api"
+    "requires_approval_actual": false,
+    "approval_gating_correct": true,
+    "controller_grounded": true,
+    "evidence_count": 1,
+    "iterations": 6
   }
 ]

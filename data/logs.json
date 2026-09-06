@@ -12,6 +12,12 @@
     "message": "DB write timeout after 3 retries (pool exhausted)"
   },
   {
+    "t": "2026-08-03T14:12:15Z",
+    "service": "checkout-api",
+    "level": "ERROR",
+    "message": "Cache failure: Redis connection refused during checkout request"
+  },
+  {
     "t": "2026-08-03T14:07:55Z",
     "service": "checkout-api",
     "level": "INFO",

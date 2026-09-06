@@ -10,6 +10,9 @@ def request_approval(
 ) -> dict[str, Any]:
     """
     Create a pending approval request for a rollback.
+
+    This function only creates an approval request.
+    It does NOT execute the rollback.
     """
 
     return {
@@ -22,39 +25,91 @@ def request_approval(
     }
 
 
-def approval_node(state: AgentState) -> dict[str, Any]:
+def approval_node(
+    state: AgentState,
+) -> dict[str, Any]:
     """
     Create an approval request when the investigation
     recommends a rollback.
+
+    Existing verified-hypothesis behavior is preserved.
+
+    If no verified hypothesis exists, safely fall back to
+    controller-grounded or selected hypothesis information.
     """
 
-    hypothesis = state.get("hypotheses", [])
-    goal = state.get("goal", "")
+    hypothesis = state.get(
+        "hypotheses",
+        [],
+    )
 
-    # Find the strongest verified hypothesis
+    # --------------------------------------------------------
+    # EXISTING VERIFIED-HYPOTHESIS PATH
+    # --------------------------------------------------------
+
     verified = [
-        h for h in hypothesis
-        if h.get("verified", False)
+        h
+        for h in hypothesis
+        if h.get(
+            "verified",
+            False,
+        )
     ]
 
-    if not verified:
+    strongest_cause = None
+
+    if verified:
+        strongest = max(
+            verified,
+            key=lambda h: h.get(
+                "confidence",
+                0,
+            ),
+        )
+
+        strongest_cause = strongest.get(
+            "cause",
+            "unknown cause",
+        )
+
+    # --------------------------------------------------------
+    # CONTROLLER-GROUNDED FALLBACK
+    # --------------------------------------------------------
+
+    if not strongest_cause:
+        strongest_cause = state.get(
+            "controller_grounded_hypothesis"
+        )
+
+    # --------------------------------------------------------
+    # SELECTED-HYPOTHESIS FALLBACK
+    # --------------------------------------------------------
+
+    if not strongest_cause:
+        strongest_cause = state.get(
+            "selected_hypothesis"
+        )
+
+    # --------------------------------------------------------
+    # SAFETY: NO EVIDENCE = NO APPROVAL REQUEST
+    # --------------------------------------------------------
+
+    if not strongest_cause:
         return {
             "pending_approval": None
         }
 
-    strongest = max(
-        verified,
-        key=lambda h: h.get("confidence", 0),
-    )
+    # --------------------------------------------------------
+    # CURRENT CHECKOUT-API DEPLOYMENT
+    # --------------------------------------------------------
 
-    # For the current checkout-api investigation,
-    # request approval for the latest deployment rollback.
     approval = request_approval(
         service="checkout-api",
         deployment_id="checkout-v2.4",
         reason=(
-            f"Rollback recommended because the verified hypothesis "
-            f"is: {strongest.get('cause', 'unknown cause')}"
+            "Rollback recommended because "
+            "the investigation established: "
+            f"{strongest_cause}"
         ),
     )
 

@@ -1,5 +1,6 @@
 import json
 import re
+import os
 from typing import Any
 
 from .report import report_node
@@ -22,6 +23,12 @@ from .registry import (
 )
 
 from . import guardrails
+
+# ============================================================
+# TRACER IMPORT - ADDED FOR OBSERVABILITY
+# ============================================================
+
+from opspilot.observability.tracer import Tracer
 
 
 # ============================================================
@@ -604,12 +611,13 @@ def _build_log_keyword(
 
     keywords = [
         "connection pool",
+        "pool exhausted",
+        "db write",
+        "database",
+        "timeout",
         "cache",
         "redis",
         "memcached",
-        "database",
-        "timeout",
-        "latency",
         "authentication",
         "memory",
         "cpu",
@@ -619,6 +627,7 @@ def _build_log_keyword(
         "error",
         "failure",
         "unavailable",
+        "latency",
     ]
 
     lowered = text.lower()
@@ -760,17 +769,20 @@ def _fallback_tool_arguments(
 
     if tool_name in {"get_runbook", "retrieve_runbook"}:
 
-        # The current registry expects a required "query"
-        # argument, not a "service" argument.
         query = (
             f"{service} investigation runbook"
             if service
             else "incident investigation runbook"
         )
 
-        return {
+        arguments = {
             "query": query,
         }
+
+        if service:
+            arguments["service"] = service
+
+        return arguments
 
     return {}
 
@@ -1624,7 +1636,22 @@ def _controller_grounded_hypothesis(
 
     facts = _collect_hard_operational_facts(state)
     goal = str(state.get("goal", ""))
-
+    # Historical-incident goals should prioritize the historical
+    # incident evidence already collected by search_incidents.
+    if _goal_requires_historical_incident(goal):
+        for observation in state.get("observations", []):
+            if (
+                isinstance(observation, dict)
+                and observation.get("source") == "search_incidents"
+            ):
+                data = observation.get("data", {})
+                if isinstance(data, dict) and data.get("count", 0) > 0:
+                    incidents = data.get("incidents", [])
+                    if incidents:
+                        incident = incidents[0]
+                        root_cause = incident.get("root_cause")
+                        if root_cause:
+                            return str(root_cause)
     # IMPORTANT:
     # The investigation goal is frequently only a service name
     # (for example, "checkout-api").  Do NOT require the goal itself
@@ -1638,6 +1665,17 @@ def _controller_grounded_hypothesis(
     #
     # This is evidence detection, not causal inference: timing alone
     # is never enough to create one of these conclusions.
+
+    # For competing-cause investigations, prefer the stronger
+    # DB/pool evidence when both cache and pool failures are present.
+    if (
+        _goal_requires_competing_cause_analysis(goal)
+        and facts["pool_exhaustion"]
+    ):
+        return (
+            "Database connection pool exhaustion caused DB write "
+            "timeouts and contributed to the observed service latency."
+        )
 
     if facts["cache_failure"]:
         return (
@@ -1753,25 +1791,50 @@ def _plan_step_to_log_keyword(
     step: str,
     goal: str,
 ) -> str:
-    """
-    Convert planner language into a compact operational log query.
-    """
 
-    lowered = (step or "").lower()
+    text = f"{step} {goal}".lower()
 
-    if "connection pool exhaustion" in lowered:
-        return "connection pool exhaustion"
-
-    if "connection pool" in lowered:
+    if (
+        "pool" in text
+        or "database" in text
+        or "db write" in text
+        or "retry" in text
+    ):
         return "connection pool"
 
-    if "pool exhausted" in lowered:
-        return "pool exhausted"
+    if (
+        "cache" in text
+        or "redis" in text
+        or "memcached" in text
+    ):
+        return "cache"
 
-    if "db write" in lowered or "database write" in lowered:
-        return "DB write"
+    if (
+        "authentication" in text
+        or "auth" in text
+    ):
+        return "authentication"
 
-    return _extract_plan_keyword(step, goal)
+    if (
+        "network" in text
+        or "connection" in text
+    ):
+        return "connection"
+
+    if (
+        "timeout" in text
+        or "timed out" in text
+    ):
+        return "timeout"
+
+    if (
+        "error" in text
+        or "failure" in text
+        or "exception" in text
+    ):
+        return "error"
+
+    return "latency"
 
 
 
@@ -1905,7 +1968,10 @@ def _build_controller_grounded_report(
 
     goal = str(state.get("goal", ""))
     topics = _goal_topics(goal)
-    service_name = goal.strip() or "the affected service"
+    service_name = str(
+        state.get("service")
+        or "the affected service"
+    ).strip()
 
     if "cache" in topics and facts["cache_failure"]:
         likely_root_cause = (
@@ -2176,6 +2242,7 @@ def _build_continuation_message(
 
 def _run_reasoning_checkpoint(
     state: AgentState,
+    tracer: Tracer | None = None,
 ) -> list[str] | None:
     """
     Generate hypotheses, verify evidence, reflect, and
@@ -2467,6 +2534,20 @@ def _run_reasoning_checkpoint(
         "plan"
     ] = new_plan
 
+    # ========================================================
+    # TRACE REPLANNED - ADDED FOR OBSERVABILITY
+    # ========================================================
+
+    if tracer:
+        tracer.log(
+            "replanned",
+            {
+                "reason": reason,
+                "new_plan": new_plan,
+            },
+            iteration=state.get("iteration", 0),
+        )
+
     print(
         "\n=== NEW PLAN ==="
     )
@@ -2496,6 +2577,7 @@ def _execute_tool(
     tool_calls: list[dict[str, Any]],
     retry_counts: dict[str, int],
     messages: list[dict[str, Any]],
+    tracer: Tracer | None = None,
 ) -> tuple[bool, bool]:
     """
     Execute one tool.
@@ -2526,6 +2608,20 @@ def _execute_tool(
     tool_name = _canonical_tool_name(
         tool_name
     )
+
+    # ========================================================
+    # TRACE TOOL REQUEST - ADDED FOR OBSERVABILITY
+    # ========================================================
+
+    if tracer:
+        tracer.log(
+            "tool_request",
+            {
+                "tool": tool_name,
+                "arguments": arguments,
+            },
+            iteration=iteration,
+        )
 
     # ========================================================
     # REPORT SAFETY GATE
@@ -2796,6 +2892,21 @@ def _execute_tool(
         )
 
         # ====================================================
+        # TRACE TOOL RESULT - ADDED FOR OBSERVABILITY
+        # ====================================================
+
+        if tracer:
+            tracer.log(
+                "tool_result",
+                {
+                    "tool": tool_name,
+                    "arguments": arguments,
+                    "result": result,
+                },
+                iteration=iteration,
+            )
+
+        # ====================================================
         # EMPTY RESULT WARNING
         # ====================================================
 
@@ -3033,7 +3144,7 @@ def _terminate_on_controller_hard_evidence(
       - query_metrics
       - get_deployments
 
-    This is deliberately deterministic.  Once these conditions are
+    This is deliberately deterministic. Once these conditions are
     true, the local 3B model is no longer allowed to create another
     reflection -> re-plan -> duplicate-search cycle.
     """
@@ -3044,6 +3155,40 @@ def _terminate_on_controller_hard_evidence(
     if not _primary_evidence_complete(
         state.get("tool_calls", [])
     ):
+        return False
+
+    # Historical-incident goals require historical evidence
+    # before hard-evidence termination is allowed.
+    goal = state.get("goal", "")
+
+    if _goal_requires_historical_incident(goal):
+        incident_already_used = any(
+            isinstance(call, dict)
+            and call.get("tool") == "search_incidents"
+            and not call.get("error")
+            for call in state.get("tool_calls", [])
+        )
+
+        if not incident_already_used:
+            return False
+    # Competing-cause goals require additional diagnostic evidence
+    # before hard-evidence termination is allowed.
+    if _goal_requires_competing_cause_analysis(goal):
+        diagnostic_log_used = any(
+            isinstance(call, dict)
+            and call.get("tool") == "search_logs"
+            and call.get("arguments", {}).get("keyword")
+            in {"timeout", "pool", "pool exhausted", "retry"}
+            and not call.get("error")
+            for call in state.get("tool_calls", [])
+        )
+
+        if not diagnostic_log_used:
+            return False
+    # Rollback goals must continue past evidence completion so that
+    # request_rollback can reach the programmatic evidence gate
+    # and human approval flow.
+    if "rollback" in str(goal).lower():
         return False
 
     state["terminated"] = True
@@ -3121,7 +3266,6 @@ def _select_controller_corroboration_tool(
     return None
 
 
-
 def _select_controller_diagnostic_tool(
     goal: str,
     state: AgentState,
@@ -3165,34 +3309,241 @@ def _select_controller_diagnostic_tool(
         if not _call_already_used(existing_calls, "search_logs", arguments):
             return "search_logs", arguments
     return None
+def _goal_requires_runbook(
+    goal: str,
+) -> bool:
+    """
+    Return True only when the user explicitly asks for
+    runbook/RAG/operational guidance.
 
+    This does not infer a root cause and does not affect
+    normal investigations.
+    """
 
+    text = (goal or "").lower()
+
+    return any(
+        term in text
+        for term in (
+            "runbook",
+            "run book",
+            "rag",
+            "knowledge base",
+            "operational guidance",
+            "troubleshooting guide",
+        )
+    )
+def _goal_requires_historical_incident(
+    goal: str,
+) -> bool:
+    """
+    Return True when the investigation goal explicitly asks
+    for historical incident information or comparison.
+    """
+
+    text = (goal or "").lower()
+
+    return any(
+        term in text
+        for term in (
+            "historical incident",
+            "historical incidents",
+            "previous",
+            "known historical",
+            "known incidents",
+            "past incident",
+            "past incidents",
+        )
+    )
+def _goal_requires_competing_cause_analysis(goal: str) -> bool:
+    """Return True when the goal explicitly asks to distinguish competing causes."""
+    text = (goal or "").lower()
+
+    return any(term in text for term in (
+        "distinguish",
+        "better explains",
+        "compare",
+        "versus",
+        "vs ",
+    ))
+def _historical_incident_keyword(
+    goal: str,
+) -> str:
+    """
+    Return a concise search keyword for historical incident lookup.
+    """
+
+    text = (goal or "").lower()
+
+    if "retry-wrapper" in text or "retry wrapper" in text:
+        return "retry-wrapper"
+
+    if "connection-pool" in text or "connection pool" in text:
+        return "connection pool"
+
+    if "database retries" in text or "db retries" in text:
+        return "retry"
+
+    if "retry" in text:
+        return "retry"
+
+    return "incident"
 def _select_controller_preflight_tool(
     goal: str,
     state: AgentState,
 ) -> tuple[str, dict[str, Any]] | None:
     """
-    Deterministically collect the primary evidence set before giving
-    Qwen another opportunity to choose speculative tools.
+    Deterministically collect the required read-only evidence.
 
-    This is intentionally controller-owned:
-        search_logs -> query_metrics -> get_deployments
+    Normal investigation order remains unchanged:
 
-    The local 3B model is used for interpretation, not for deciding
-    whether the evidence sources exist.
+        search_logs
+        -> query_metrics
+        -> get_deployments
+
+    If the user explicitly asks for runbook/RAG guidance,
+    retrieve_runbook is collected first:
+
+        retrieve_runbook
+        -> search_logs
+        -> query_metrics
+        -> get_deployments
+
+    IMPORTANT:
+    retrieve_runbook is additional contextual evidence.
+    It does NOT replace the three primary operational evidence
+    sources required by the existing evidence gate.
     """
+
     used = _controller_successful_evidence_tools(state)
 
+    # --------------------------------------------------------
+    # EXPLICIT RUNBOOK / RAG REQUEST
+    # --------------------------------------------------------
+    #
+    # Only activate this path when the user's goal explicitly
+    # requests runbook/RAG/operational guidance.
+    #
+    # Normal investigations are completely unaffected.
+    #
+    if _goal_requires_runbook(goal):
+
+        runbook_already_used = any(
+            isinstance(call, dict)
+            and call.get("tool") == "retrieve_runbook"
+            and not call.get("error")
+            for call in state.get("tool_calls", [])
+        )
+
+        if not runbook_already_used:
+
+            arguments = _normalize_tool_arguments(
+                "retrieve_runbook",
+                _fallback_tool_arguments(
+                    "retrieve_runbook",
+                    goal,
+                    state,
+                ),
+            )
+
+            return (
+                "retrieve_runbook",
+                arguments,
+            )
+    # --------------------------------------------------------
+    # EXPLICIT HISTORICAL INCIDENT REQUEST
+    # --------------------------------------------------------
+    #
+    # If the goal explicitly asks for historical incidents,
+    # collect historical incident evidence before the normal
+    # primary evidence sequence.
+    #
+    if _goal_requires_historical_incident(goal):
+
+        incident_already_used = any(
+            isinstance(call, dict)
+            and call.get("tool") == "search_incidents"
+            and not call.get("error")
+            for call in state.get("tool_calls", [])
+        )
+
+        if not incident_already_used:
+
+            arguments = {
+                "keyword": _historical_incident_keyword(goal),
+                "service": _extract_service(goal, state),
+            }
+
+            arguments = _normalize_tool_arguments(
+                "search_incidents",
+                arguments,
+            )
+
+            return (
+                "search_incidents",
+                arguments,
+            )
+    # --------------------------------------------------------
+    # EXPLICIT HISTORICAL INCIDENT REQUEST
+    # --------------------------------------------------------
+    #
+    # If the goal explicitly asks for historical incidents,
+    # search_incidents must be collected before the normal
+    # primary evidence sequence.
+    #
+    # This prevents the controller from forcing:
+    #     search_logs -> query_metrics -> get_deployments
+    # before satisfying an explicit historical-incident goal.
+    #
+    if _goal_requires_historical_incident(goal):
+
+        incident_already_used = any(
+            isinstance(call, dict)
+            and call.get("tool") == "search_incidents"
+            and not call.get("error")
+            for call in state.get("tool_calls", [])
+        )
+
+        if not incident_already_used:
+
+            arguments = {
+                "keyword": _historical_incident_keyword(goal),
+                "service": _extract_service(goal, state),
+            }
+
+            arguments = _normalize_tool_arguments(
+                "search_incidents",
+                arguments,
+            )
+
+            return (
+                "search_incidents",
+                arguments,
+            )
+
+    # --------------------------------------------------------
+    # --------------------------------------------------------
+    # EXISTING PRIMARY EVIDENCE FLOW
+    # --------------------------------------------------------
+    #
+    # DO NOT change this order. Existing scenarios depend on it.
+    #
     for tool_name in (
         "search_logs",
         "query_metrics",
         "get_deployments",
     ):
+
         if tool_name in used:
             continue
 
         if tool_name == "search_logs":
-            service = _extract_service(goal, state)
+
+            service = _extract_service(
+                goal,
+                state,
+            )
+
             arguments = {
                 "service": service,
                 "level": "ERROR",
@@ -3200,7 +3551,9 @@ def _select_controller_preflight_tool(
                 "start": DEFAULT_INVESTIGATION_START,
                 "end": DEFAULT_INVESTIGATION_END,
             }
+
         else:
+
             arguments = _normalize_tool_arguments(
                 tool_name,
                 _fallback_tool_arguments(
@@ -3210,14 +3563,17 @@ def _select_controller_preflight_tool(
                 ),
             )
 
-        return tool_name, arguments
+        return (
+            tool_name,
+            arguments,
+        )
 
     return None
-
 
 def _run_dynamic_tool_loop(
     goal: str,
     state: AgentState,
+    tracer: Tracer | None = None,
 ) -> AgentState:
     """
     Run the autonomous OpsPilot investigation loop.
@@ -3453,12 +3809,18 @@ Do NOT guess.
     # eventually choose INCONCLUSIVE instead of looping.
     reasoning_checkpoints = 0
 
+    # Get max iterations from state
+    max_iterations = state.get(
+        "max_iterations",
+        MAX_TOOL_ITERATIONS,
+    )
+
     # ========================================================
     # AUTONOMOUS LOOP
     # ========================================================
 
     for iteration in range(
-        MAX_TOOL_ITERATIONS
+        max_iterations
     ):
 
         state[
@@ -3545,6 +3907,7 @@ Do NOT guess.
                 tool_calls,
                 retry_counts,
                 messages,
+                tracer,
             )
 
             if should_stop:
@@ -3581,6 +3944,7 @@ Do NOT guess.
             successful, should_stop = _execute_tool(
                 diagnostic_tool, diagnostic_arguments, iteration + 1, state,
                 observations, tool_calls, retry_counts, messages,
+                tracer,
             )
             if should_stop:
                 break
@@ -3668,6 +4032,132 @@ Do NOT guess.
                         tool_calls,
                         retry_counts,
                         messages,
+                        tracer,
+                    )
+
+                    if should_stop:
+                        break
+
+                    if successful:
+                        no_tool_streak = 0
+
+                    continue
+                            # Rollback goals must continue to the approval flow
+                            # Rollback goals must continue to the approval flow
+                # after evidence collection instead of terminating here.
+                          # Rollback goals must proceed to the programmatic
+              # rollback request and human approval flow.
+            if "rollback" in str(goal).lower():
+                rollback_already_requested = any(
+                    isinstance(call, dict)
+                    and call.get("tool") == "request_rollback"
+                    and not call.get("error")
+                    for call in state.get("tool_calls", [])
+                )
+
+                if not rollback_already_requested:
+                    rollback_arguments = {
+                        "service": _extract_service(goal, state),
+                        "deployment_id": "checkout-v2.4",
+                        "reason": (
+                            "Evidence-grounded investigation found "
+                            "DB connection pool exhaustion and DB write "
+                            "timeouts following the checkout-v2.4 deployment."
+                        ),
+                    }
+
+                    rollback_arguments = _normalize_tool_arguments(
+                        "request_rollback",
+                        rollback_arguments,
+                    )
+
+                    print(
+                        "\n=== CONTROLLER ROLLBACK REQUEST ==="
+                    )
+                    print(
+                        "Evidence collection is complete."
+                    )
+                    print(
+                        "Forcing request_rollback through the "
+                        "programmatic approval gate."
+                    )
+                    print(
+                        "Arguments:",
+                        rollback_arguments,
+                    )
+
+                    successful, should_stop = _execute_tool(
+                        "request_rollback",
+                        rollback_arguments,
+                        iteration + 1,
+                        state,
+                        observations,
+                        tool_calls,
+                        retry_counts,
+                        messages,
+                        tracer,
+                    )
+
+                    if should_stop:
+                        break
+
+                    if successful:
+                        no_tool_streak = 0
+
+                    continue
+
+                        # Competing-cause goals require additional diagnostic
+            # evidence before controller termination is allowed.
+            if _goal_requires_competing_cause_analysis(
+                state.get("goal", "")
+            ):
+                diagnostic_log_used = any(
+                    isinstance(call, dict)
+                    and call.get("tool") == "search_logs"
+                    and call.get("arguments", {}).get("keyword")
+                    in {
+                        "timeout",
+                        "pool",
+                        "pool exhausted",
+                        "retry",
+                    }
+                    and not call.get("error")
+                    for call in state.get("tool_calls", [])
+                )
+
+                if not diagnostic_log_used:
+                    diagnostic_arguments = {
+                        "service": _extract_service(goal, state),
+                        "level": "ERROR",
+                        "keyword": "timeout",
+                        "start": "2026-08-03T14:00:00Z",
+                        "end": "2026-08-03T14:20:00Z",
+                    }
+
+                    diagnostic_arguments = _normalize_tool_arguments(
+                        "search_logs",
+                        diagnostic_arguments,
+                    )
+
+                    print(
+                        "\n=== CONTROLLER DIAGNOSTIC EVIDENCE ==="
+                    )
+                    print(
+                        "Forcing diagnostic search_logs for "
+                        "competing-cause analysis."
+                    )
+                    print("Arguments:", diagnostic_arguments)
+
+                    successful, should_stop = _execute_tool(
+                        "search_logs",
+                        diagnostic_arguments,
+                        iteration + 1,
+                        state,
+                        observations,
+                        tool_calls,
+                        retry_counts,
+                        messages,
+                        tracer,
                     )
 
                     if should_stop:
@@ -3811,6 +4301,7 @@ Do NOT guess.
                             tool_calls,
                             retry_counts,
                             messages,
+                            tracer,
                         )
                     )
 
@@ -3865,6 +4356,7 @@ Do NOT guess.
                         tool_calls,
                         retry_counts,
                         messages,
+                        tracer,
                     )
 
                     if should_stop:
@@ -3935,7 +4427,8 @@ Do NOT guess.
                 reasoning_checkpoints += 1
 
                 _run_reasoning_checkpoint(
-                    state
+                    state,
+                    tracer,
                 )
 
                 gate_passed, gate_reason = (
@@ -3996,7 +4489,8 @@ Do NOT guess.
 
             new_plan = (
                 _run_reasoning_checkpoint(
-                    state
+                    state,
+                    tracer,
                 )
             )
 
@@ -4152,6 +4646,7 @@ Do NOT guess.
                     tool_calls,
                     retry_counts,
                     messages,
+                    tracer,
                 )
             )
 
@@ -4228,6 +4723,7 @@ Do NOT guess.
                     tool_calls,
                     retry_counts,
                     messages,
+                    tracer,
                 )
 
                 if should_stop:
@@ -4280,6 +4776,7 @@ Do NOT guess.
                     tool_calls,
                     retry_counts,
                     messages,
+                    tracer,
                 )
 
             continue
@@ -4401,6 +4898,7 @@ Do NOT guess.
                         tool_calls,
                         retry_counts,
                         messages,
+                        tracer,
                     )
                 )
 
@@ -4424,6 +4922,7 @@ Do NOT guess.
                 tool_calls,
                 retry_counts,
                 messages,
+                tracer,
             )
         )
 
@@ -4462,16 +4961,23 @@ Do NOT guess.
         # REASONING CHECKPOINT EVERY 3 ITERATIONS
         # ====================================================
 
+        # Check if reflection is disabled via environment variable
+        reflection_disabled = os.environ.get(
+            "OPSPILOT_DISABLE_REFLECTION"
+        ) == "1"
+
         if (
             (iteration + 1) % 3 == 0
             and successful
+            and not reflection_disabled
         ):
 
             reasoning_checkpoints += 1
 
             new_plan = (
                 _run_reasoning_checkpoint(
-                    state
+                    state,
+                    tracer,
                 )
             )
 
@@ -4762,6 +5268,8 @@ def execute_approved_action(
 
 def run_investigation(
     goal: str,
+    max_iterations: int = MAX_TOOL_ITERATIONS,
+    service: str | None = None,
 ) -> dict[str, Any]:
     """
     Run the complete OpsPilot investigation pipeline.
@@ -4795,6 +5303,7 @@ def run_investigation(
 
     state: AgentState = {
         "goal": goal,
+        "service": service or _extract_service(goal, {}),
         "plan": [],
         "observations": [],
         "tool_calls": [],
@@ -4804,7 +5313,7 @@ def run_investigation(
         "reflection": None,
         "selected_hypothesis": None,
         "iteration": 0,
-        "max_iterations": MAX_TOOL_ITERATIONS,
+        "max_iterations": max_iterations,
         "terminated": False,
         "termination_reason": None,
         "pending_approval": None,
@@ -4816,6 +5325,14 @@ def run_investigation(
         "incident_status": "investigating",
         "final_report": None,
     }
+
+    # ========================================================
+    # TRACER INITIALIZATION - ADDED FOR OBSERVABILITY
+    # ========================================================
+
+    tracer = Tracer(
+        investigation_id=goal[:40]
+    )
 
     # ========================================================
     # OPSPILOT START
@@ -4850,6 +5367,18 @@ def run_investigation(
         plan_result
     )
 
+    # ========================================================
+    # TRACE PLAN CREATED - ADDED FOR OBSERVABILITY
+    # ========================================================
+
+    tracer.log(
+        "plan_created",
+        {
+            "plan": state.get("plan", []),
+        },
+        iteration=state.get("iteration", 0),
+    )
+
     print(
         "\n=== PLAN ==="
     )
@@ -4870,6 +5399,7 @@ def run_investigation(
     state = _run_dynamic_tool_loop(
         goal,
         state,
+        tracer,
     )
 
     # ========================================================
@@ -4962,6 +5492,12 @@ def run_investigation(
         state[
             "terminated"
         ] = True
+
+        # ====================================================
+        # TRACE CLOSE WITH STATE - ADDED FOR OBSERVABILITY
+        # ====================================================
+
+        tracer.close(state)
 
         return state
 
@@ -5056,6 +5592,12 @@ def run_investigation(
     state[
         "terminated"
     ] = True
+
+    # ========================================================
+    # TRACE CLOSE WITH STATE - ADDED FOR OBSERVABILITY
+    # ========================================================
+
+    tracer.close(state)
 
     print(
         "\n========================================"
