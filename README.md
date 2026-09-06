@@ -1,210 +1,87 @@
-🛰️ OpsPilot
+<div align="center">
 
-Autonomous Incident Investigation Agent for Evidence-Grounded SRE Workflows
+# OpsPilot
 
-OpsPilot is an agentic AI system that investigates service
-incidents, gathers operational evidence, tests competing hypotheses,
-verifies conclusions, reflects on incomplete investigations, and stops
-at a human-approval boundary before high-impact actions.
+**Autonomous Incident Investigation Agent for Evidence-Grounded SRE Workflows**
 
-<p align="center">
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688.svg)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B.svg)](https://streamlit.io/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C.svg)](https://www.langchain.com/langgraph)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg)](https://www.docker.com/)
 
-Observe → Investigate → Verify → Reflect → Re-plan → Report →
-Approve
+`Observe → Investigate → Verify → Reflect → Re-plan → Report → Approve`
 
-</p>
+</div>
 
+---
 
+## Overview
 
+OpsPilot is an agentic AI system that investigates service incidents the way an SRE would: it forms hypotheses, gathers operational evidence from multiple sources, checks whether that evidence actually supports a conclusion, and stops at a human-approval boundary before any high-impact action is taken.
 
+Instead of following a fixed pipeline —
 
+```
+check metrics → check logs → check deployment → write report
+```
 
+OpsPilot continuously asks:
 
+> **"What evidence do I need next to confidently explain this incident?"**
 
+For a representative `checkout-api` latency incident, this looks like:
 
+```
+Recent deployment → Retry wrapper around DB writes → Database connection pressure
+→ DB write timeouts / pool exhaustion → Increasing p95 latency → Evidence-grounded report
+```
 
-⚡ The 30-Second Version
+What matters is not just the final sentence the agent produces — it's how it got there, and OpsPilot records and evaluates that path.
 
-Traditional incident automation often follows a fixed sequence:
+## Table of Contents
 
-Check metrics → check logs → check deployment → write report
+- [Why This Is Agentic AI](#why-this-is-agentic-ai)
+- [Architecture](#architecture)
+- [Core Components](#core-components)
+- [Tooling Layer](#tooling-layer)
+- [Safety & Human Approval](#safety--human-approval)
+- [LLM Strategy](#llm-strategy)
+- [Retrieval-Augmented Knowledge](#retrieval-augmented-knowledge)
+- [Observability](#observability)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Running with Docker](#running-with-docker)
+- [API Reference](#api-reference)
+- [Evaluation](#evaluation)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
 
-OpsPilot is designed around a different question:
+## Why This Is Agentic AI
 
-"What evidence do I need next to confidently explain this
-incident?"
+OpsPilot is not an LLM bolted onto a set of tools — it implements the full decision loop an autonomous agent needs:
 
-The agent starts with an investigation goal, chooses operational tools,
-observes their results, maintains hypotheses and state, checks whether
-the evidence actually supports a conclusion, and can change its
-investigation path when evidence is insufficient.
+| Agent Capability | OpsPilot Implementation |
+|---|---|
+| Goal interpretation | Investigation goal + service extraction |
+| Planning | Planner / controller |
+| Tool selection | Metrics, logs, deployment, and retrieval tools |
+| State | Structured investigation state |
+| Hypothesis generation | Candidate root-cause hypotheses |
+| Evidence gathering | Tool execution + retrieved operational knowledge |
+| Verification | Evidence gate / verifier |
+| Reflection | Critique of incomplete or weak investigations |
+| Re-planning | New evidence requests when needed |
+| Safety | Guardrails + human-approval boundary |
+| Observability | Full trajectory tracing |
+| Evaluation | Automated 30-scenario benchmark |
 
-For a representative checkout-api latency incident, OpsPilot can
-connect:
+**Design principle:** autonomy is only useful when the system can justify its next action and ground its final conclusion in evidence.
 
-Recent deployment
-      ↓
-Retry wrapper around DB writes
-      ↓
-Database connection pressure
-      ↓
-DB write timeouts / pool exhaustion
-      ↓
-Increasing p95 latency
-      ↓
-Evidence-grounded incident report
+## Architecture
 
-The important part is not merely generating the final sentence. The
-system records and evaluates how it arrived there.
-
-🎯 What Problem Does OpsPilot Solve?
-
-When a production service becomes slow or starts returning errors, an
-engineer may need to inspect several sources:
-
-deployment history
-
-service metrics
-
-application logs
-
-historical incidents
-
-operational runbooks
-
-troubleshooting documentation
-
-The investigation is therefore not just a question-answering task.
-
-It is a sequential decision problem:
-
-What should I inspect?
-        ↓
-What did I learn?
-        ↓
-Which hypothesis is now more plausible?
-        ↓
-What evidence is still missing?
-        ↓
-Which tool should I call next?
-        ↓
-Is the evidence strong enough to report?
-        ↓
-If not → reflect and investigate again
-
-OpsPilot packages that reasoning loop into a reproducible agentic
-system.
-
-🧠 Why This Is Agentic AI
-
-OpsPilot is not simply an LLM placed in front of a collection of tools.
-
-The system has:
-
-Agent capability                    OpsPilot implementation
-
-Goal interpretation                 Investigation goal + service
-extraction
-
-Planning                            Planner / controller
-
-Tool selection                      Metrics, logs, deployments and
-retrieval tools
-
-State                               Structured investigation state
-
-Hypothesis generation               Candidate root-cause hypotheses
-
-Evidence gathering                  Tool execution + retrieved
-operational knowledge
-
-Verification                        Evidence gate / verifier
-
-Reflection                          Critique of incomplete or weak
-investigations
-
-Re-planning                         New evidence requests when needed
-
-Safety                              Guardrails + approval boundary
-
-Observability                       Trajectory tracing
-
-Evaluation                          Automated 30-scenario benchmark
-
-The central design principle is:
-
-Autonomy is useful only when the system can justify its next action
-and ground its final conclusion in evidence.
-
-🏗️ Architecture
-
-High-Level System
-
-                         ┌──────────────────────┐
-                         │       USER           │
-                         │ Investigation Goal   │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   OpsPilot Agent     │
-                         │ Controller / Loop    │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │      PLANNER         │
-                         │ What should we do?   │
-                         └──────────┬───────────┘
-                                    │
-                    ┌───────────────┼────────────────┐
-                    │               │                │
-                    ▼               ▼                ▼
-              ┌──────────┐   ┌──────────┐     ┌──────────────┐
-              │ Metrics  │   │  Logs    │     │ Deployments  │
-              └────┬─────┘   └────┬─────┘     └──────┬───────┘
-                   │              │                   │
-                   └──────────────┼───────────────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────────┐
-                         │   RAG / Knowledge    │
-                         │ Runbooks / Incidents │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │    HYPOTHESIS        │
-                         │ Candidate root causes│
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │      VERIFIER        │
-                         │ Is evidence enough?  │
-                         └──────────┬───────────┘
-                                    │
-                       ┌────────────┴────────────┐
-                       │                         │
-                 Evidence weak              Evidence strong
-                       │                         │
-                       ▼                         ▼
-                ┌──────────────┐         ┌──────────────┐
-                │  REFLECTION  │         │    REPORT    │
-                │ Critique gap │         │ Root cause   │
-                └──────┬───────┘         │ Evidence     │
-                       │                 │ Recommendation│
-                       ▼                 └──────┬───────┘
-                ┌──────────────┐                │
-                │   RE-PLAN    │                ▼
-                │ Gather more  │       ┌──────────────────┐
-                │ evidence     │       │ HUMAN APPROVAL   │
-                └──────┬───────┘       │ High-impact     │
-                       │                │ actions         │
-                       └───────►        └──────────────────┘
-
-LangGraph-Oriented Flow
-
+```mermaid
 flowchart TD
     A[Investigation Goal] --> B[Controller]
     B --> C[Planner]
@@ -221,7 +98,7 @@ flowchart TD
     H --> J
     I --> J
 
-    J --> K[Hypothesis]
+    J --> K[Hypothesis Engine]
     K --> L[Verifier]
     L --> M{Evidence Sufficient?}
 
@@ -234,1416 +111,290 @@ flowchart TD
     Q -- Yes --> R[Human Approval]
     Q -- No --> S[Complete]
     R --> S
+```
 
-🔍 The Investigation Loop
+OpsPilot behaves like an investigation **state machine**, not a single prompt: `Plan → Call Tool → Observe → Update State → Hypothesize → Verify → (Reflect & Re-plan | Report & Approve)`.
 
-OpsPilot behaves like an investigation state machine rather than a
-single prompt.
+## Core Components
 
-┌───────────────┐
-│  GOAL         │
-└───────┬───────┘
-        ▼
-┌───────────────┐
-│ PLAN          │
-└───────┬───────┘
-        ▼
-┌───────────────┐
-│ CALL TOOL     │◄──────────────────────────┐
-└───────┬───────┘                           │
-        ▼                                   │
-┌───────────────┐                           │
-│ OBSERVE       │                           │
-└───────┬───────┘                           │
-        ▼                                   │
-┌───────────────┐                           │
-│ UPDATE STATE  │                           │
-└───────┬───────┘                           │
-        ▼                                   │
-┌───────────────┐                           │
-│ HYPOTHESIZE   │                           │
-└───────┬───────┘                           │
-        ▼                                   │
-┌───────────────┐                           │
-│ VERIFY        │                           │
-└───────┬───────┘                           │
-        │                                   │
-    ┌───┴─────────────┐                     │
-    │                 │                     │
-  Weak              Strong                  │
-    │                 │                     │
-    ▼                 ▼                     │
-REFLECT            REPORT                   │
-    │                 │                     │
-    ▼                 ▼                     │
-RE-PLAN          APPROVAL                   │
-    │                                       │
-    └───────────────────────────────────────┘
+| Component | File | Responsibility |
+|---|---|---|
+| Controller / Agent Loop | `opspilot/agent_loop.py` | Coordinates the investigation, selects and executes actions, checks termination conditions, grounds the final report in the controller's own boundary |
+| LangGraph Agent | `opspilot/langgraph_agent.py` | LangGraph-oriented representation of the agent flow |
+| Planner | `opspilot/planner.py` | Translates an investigation goal into an ordered set of operational actions, and can re-plan on incomplete evidence |
+| Hypothesis Engine | `opspilot/hypothesis.py` | Maintains multiple candidate root causes and updates their credibility as evidence arrives |
+| Evidence Verifier | `opspilot/verifier.py` | Gates the transition from "interesting observations" to "sufficient evidence for a conclusion" |
+| Reflection / Critic | `opspilot/reflection.py` | Identifies missing evidence and triggers a new investigation cycle |
+| State | `opspilot/state.py` | Structured investigation state (goal, service, observations, evidence, hypotheses, iteration/termination info) |
+| Guardrails | `opspilot/guardrails.py` | Validates tool arguments and constrains tool use |
+| Approval Boundary | `opspilot/approval.py` | Human-in-the-loop gate for high-impact actions |
+| Report Generation | `opspilot/report.py` | Produces the final, controller-grounded incident report |
 
-This loop is where the project earns its "agentic" characterization.
+## Tooling Layer
 
-🧩 Core Components
+| Tool | Purpose |
+|---|---|
+| `query_metrics` | Inspect service metrics over a time window |
+| `search_logs` | Search service logs for relevant events |
+| `get_deployments` | Inspect recent deployments |
+| `retrieve_runbook` | Retrieve operational guidance |
+| `retrieve_incident` | Retrieve historical incident context |
 
-1. Controller / Agent Loop
+Tool arguments are schema-validated (`opspilot/schemas.py`) rather than trusted blindly, and constrained by `opspilot/guardrails.py`.
 
-opspilot/agent_loop.py
+## Safety & Human Approval
 
-The controller coordinates the investigation.
+OpsPilot separates **investigation** from **operational action**. The agent can investigate autonomously, but high-impact recommendations do not execute automatically:
 
-It is responsible for:
+```mermaid
+flowchart LR
+    A[AI Investigates] --> B[AI Recommends]
+    B --> C{High-Impact Action?}
+    C -- No --> D[Execute]
+    C -- Yes --> E[Human Approval]
+    E -- Approve --> D
+    E -- Reject --> F[Halt]
+```
 
-reading the current state
+This is implemented in `opspilot/approval.py` and gives the system a clear, auditable autonomy boundary.
 
-selecting or enforcing investigation actions
+## LLM Strategy
 
-executing tools
+OpsPilot uses a local-first LLM path with an optional hosted fallback, implemented in `opspilot/llm.py`:
 
-updating evidence
+```mermaid
+flowchart TD
+    A[LLM Request] --> B{Groq Available?}
+    B -- Yes --> C[Groq / Hosted API]
+    B -- No --> D[Ollama Fallback]
+    D --> E["qwen2.5:3b-instruct"]
+```
 
-checking termination conditions
+The Ollama endpoint is configurable via the `OLLAMA_URL` environment variable, so Docker can reach a host-side Ollama instance through `host.docker.internal` without breaking local execution.
 
-preventing wasteful loops
+## Retrieval-Augmented Knowledge
 
-grounding the final report in the controller-selected hypothesis
+A local retrieval layer (`opspilot/rag/`) gives the agent access to operational knowledge that isn't hard-coded into the controller:
 
-A key implementation lesson was that the final report must preserve
-the controller's investigation boundary. Otherwise an LLM-generated
-phrase can accidentally replace the actual service/incident context.
-
-2. Planner
-
-opspilot/planner.py
-
-The planner translates the investigation goal into operational actions.
-
-Example:
-
-Goal:
-Investigate checkout-api latency after the latest deployment
-
-Possible plan:
-1. Inspect deployments
-2. Query latency metrics
-3. Search relevant error logs
-4. Retrieve troubleshooting knowledge
-5. Compare evidence
-6. Verify root cause
-7. Report
-
-The planner is not treated as a one-shot script. It can participate in a
-re-planning cycle when evidence is incomplete.
-
-3. Hypothesis Engine
-
-opspilot/hypothesis.py
-
-The system maintains candidate explanations instead of immediately
-committing to the first plausible answer.
-
-For example:
-
-H1: Database connection pool exhaustion
-H2: Redis contention
-H3: Deployment regression
-H4: Network latency
-
-Evidence can increase or decrease the credibility of these explanations.
-
-The objective is not to generate the most convincing sentence.
-
-The objective is to select the explanation best supported by the
-available evidence.
-
-4. Evidence Verifier
-
-opspilot/verifier.py
-
-The verifier acts as a gate between:
-
-“I saw some interesting observations”
-
-and:
-
-“I have enough evidence to make a conclusion.”
-
-This distinction is critical.
-
-A model may produce a plausible root cause even when:
-
-a tool returned no data
-
-evidence is contradictory
-
-a deployment is unrelated
-
-the time window is wrong
-
-the retrieved document does not support the claim
-
-OpsPilot therefore treats evidence sufficiency as a separate concern.
-
-5. Reflection / Critic
-
-opspilot/reflection.py
-
-Reflection asks:
-
-"What is missing from the current investigation?"
-
-Examples of reflection outcomes:
-
-Evidence is too weak.
-→ Query another source.
-
-Deployment evidence exists but causal link is unclear.
-→ Inspect metrics around deployment time.
-
-Logs are sparse.
-→ Retrieve a runbook or historical incident.
-
-Current hypothesis is plausible but not sufficiently supported.
-→ Continue investigation.
-
-Reflection is therefore used as a control mechanism, not merely as
-decorative chain-of-thought.
-
-📚 RAG: Operational Knowledge
-
-OpsPilot includes a local retrieval layer for operational knowledge.
-
-Relevant knowledge categories include:
-
+```
 opspilot/rag/knowledge/
-│
-├── architecture/
-│   └── deployment-and-retries.md
-│
-├── incidents/
-│   └── INC-104.md
-│
-├── runbooks/
-│   └── checkout-api.md
-│
-└── troubleshooting/
-    └── database-pool.md
-
-The retrieval layer is implemented through:
-
-opspilot/rag/loader.py
-opspilot/rag/ingest.py
-opspilot/rag/retriever.py
-
-This gives the agent access to operational context without hard-coding
-every troubleshooting rule into the controller.
-
-Why RAG matters
-
-A metric may show:
-
-Latency increased.
-
-A log may show:
-
-DB write timeout.
-
-A runbook can provide the operational interpretation:
-
-Connection pool exhaustion can cause DB write contention
-and propagate into request latency.
-
-RAG therefore helps bridge the gap between raw observations and
-operational knowledge.
-
-🛠️ Tooling Layer
-
-OpsPilot's tools provide the agent with controlled access to the
-incident environment.
-
-Tool                                Purpose
-
-query_metrics                     Inspect service metrics over a time
-window
-
-search_logs                       Search service logs for relevant
-events
-
-get_deployments                   Inspect recent deployments
-
-retrieve_runbook                  Retrieve operational guidance
-
-retrieve_incident                 Retrieve historical incident
-context
-
-Tool arguments are validated rather than blindly trusted.
-
-The tool layer is implemented primarily in:
-
-opspilot/tools.py
-opspilot/schemas.py
-opspilot/guardrails.py
-
-🛡️ Safety and Human Approval
-
-OpsPilot separates:
-
-Investigation
-
-from:
-
-Operational action
-
-An agent can investigate autonomously, but an impactful action should
-not automatically execute just because an LLM recommended it.
-
-The approval boundary is implemented through:
-
-opspilot/approval.py
-
-Conceptually:
-
-AI investigates
-      ↓
-AI recommends
-      ↓
-Is action high-impact?
-      │
-   ┌──┴──┐
-   │     │
-  No    Yes
-   │     │
-   ▼     ▼
-Execute  HUMAN APPROVAL
-         │
-     ┌───┴────┐
-     │        │
-  Approve   Reject
-     │        │
-     └───┬────┘
-         ▼
-      Continue
-
-This gives the system a clear autonomy boundary.
-
-🤖 LLM Strategy
-
-OpsPilot supports a local-first LLM path with an optional Groq path.
-
-The implementation is in:
-
-opspilot/llm.py
-
-Current design:
-
-                 ┌───────────────┐
-                 │ LLM Request   │
-                 └───────┬───────┘
-                         │
-                 ┌───────▼────────┐
-                 │ Groq available?│
-                 └───────┬────────┘
-                    Yes  │  No
-                         │
-              ┌──────────▼───┐
-              │ Groq / hosted│
-              └──────────────┘
-                         │
-                         ▼
-                  Ollama fallback
-                         │
-                         ▼
-              qwen2.5:3b-instruct
-
-The local fallback uses:
-
-qwen2.5:3b-instruct
-
-This was deliberately kept lightweight enough for local development.
-
-The Ollama endpoint is configurable through:
-
-OLLAMA_URL
-
-so Docker can communicate with a host-side Ollama service using:
-
-host.docker.internal
-
-without breaking normal local Windows execution.
-
-📊 Evaluation
-
-OpsPilot is evaluated against 30 unique scenarios.
-
-The dataset was designed to vary the investigation objective rather than
-repeating one incident pattern.
-
-Examples of scenario families include:
-
-deployment regressions
-
-database pool exhaustion
-
-database timeout investigations
-
-latency spikes
-
-error-rate spikes
-
-missing or insufficient logs
-
-Redis vs database hypotheses
-
-historical incident retrieval
-
-runbook/RAG investigations
-
-evidence sufficiency checks
-
-rollback recommendations
-
-complete evidence-grounded investigations
-
-Current evaluation snapshot
-
-Metric                                  Result
-
-Scenarios                               30
-Unique scenarios                   30 / 30
-Duplicate scenarios                      0
-Tool selection accuracy              99.2%
-Tool argument accuracy               91.4%
-Investigation success rate            100%
-Root-cause accuracy                   100%
-Loop completion rate                  100%
-Approval gating correctness           100%
-Controller grounding rate             100%
-Average tool calls                     4.2
-Average unnecessary tool calls         1.0
-Average evidence count                 1.0
-
-These are benchmark results on the project's controlled scenario set,
-not a claim of production reliability.
-
-The raw artifacts are stored in:
-
-eval/scenarios.json
-eval/results.json
-eval/summary.json
-eval/failure_analysis.md
-
-🧪 Evaluation Pipeline
-
-Run the evaluation with:
-
-python -m eval.run_eval
-
-The pipeline produces:
-
-eval/
-├── results.json
-├── summary.json
-└── failure_analysis.md
-
-The scenario generator is:
-
-eval/generate_scenarios.py
-
-The evaluator measures more than "did the model say the right answer?"
-
-It also examines:
-
-Tool selection
-Tool arguments
-Investigation completion
-Root-cause correctness
-Tool-call efficiency
-Loop completion
-Approval gating
-Controller grounding
-Evidence
-
-This makes the evaluation closer to an agent evaluation problem than
-a simple text-generation benchmark.
-
-🔭 Observability: The Agent's Flight Recorder
-
-Agentic systems can be difficult to debug because the final answer hides
-the path taken to reach it.
-
-OpsPilot therefore records investigation trajectories.
-
-The tracing implementation lives in:
-
-opspilot/observability/tracer.py
-
-And the inspection interface lives in:
-
-ui/trajectory_viewer.py
-
-A trajectory can expose information such as:
-
-Iteration 1
-    ↓
-Tool selected
-    ↓
-Arguments
-    ↓
-Tool result
-    ↓
-State update
-    ↓
-Hypothesis
-    ↓
-Verifier decision
-    ↓
-Next action
-
-This makes failures inspectable.
-
-Instead of asking:
-
-"Why did the agent get this answer?"
-
-we can ask:
-
-"At which iteration did the investigation diverge?"
-
-That is a much more useful debugging question.
-
-🖥️ User Interfaces
-
-OpsPilot provides a Streamlit interface:
-
-ui/app.py
-
-and a separate trajectory viewer:
-
-ui/trajectory_viewer.py
-
-The Streamlit application provides an interactive way to submit
-investigation goals and inspect returned findings.
-
-The trajectory viewer is focused on agent behavior and investigation
-traces.
-
-🌐 FastAPI
-
-The backend API is implemented in:
-
-api/main.py
-
-Available endpoints include:
-
-GET  /
-GET  /health
-POST /investigate
-POST /approve
-
-Health check
-
-GET /health
-
-Response:
-
-{
-  "status": "healthy"
-}
-
-Investigation
-
-POST /investigate
-Content-Type: application/json
-
-{
-  "goal": "Investigate the checkout-api latency spike after the latest deployment"
-}
-
-The response contains investigation information such as:
-
-service
-incident_status
-termination_reason
-controller_grounded
-hypothesis
-root_cause
-confidence
-evidence
-
-Interactive API documentation is available through FastAPI's generated
-Swagger interface at:
-
-http://127.0.0.1:8000/docs
-
-🐳 Docker
-
-OpsPilot is packaged for reproducible backend execution.
-
-Files:
-
-Dockerfile
-docker/docker-compose.yml
-.dockerignore
-
-The container:
-
-Python 3.11
-    ↓
-Dependencies
-    ↓
-OpsPilot source
-    ↓
-Uvicorn
-    ↓
-FastAPI
-
-The container exposes:
-
-8000
-
-The Docker setup also supports communication with a host-side Ollama
-service through:
-
-host.docker.internal:11434
-
-Build and start
-
-From the project root:
-
-docker compose -f docker/docker-compose.yml up --build
-
-Verify
-
-Invoke-RestMethod http://127.0.0.1:8000/health
-
-Expected:
-
-{
-  "status": "healthy"
-}
-
-Then open:
-
-http://127.0.0.1:8000/docs
-
-Stop
-
-docker compose -f docker/docker-compose.yml down
-
-🚀 Local Setup
-
-1. Clone the repository
-
-git clone https://github.com/deepshikapalepu20/opspilot.git
-cd opspilot
-
-2. Create a virtual environment
-
-python -m venv venv
-
-Activate it on PowerShell:
-
-.\venv\Scripts\Activate.ps1
-
-3. Install dependencies
-
-pip install -r requirements.txt
-
-4. Configure environment variables
-
-Copy:
-
-.env.example
-
-to:
-
-.env
-
-Never commit .env.
-
-The repository's .gitignore intentionally excludes local secrets and
-development artifacts.
-
-5. Start Ollama
-
-Make sure the required local model is available:
-
-ollama run qwen2.5:3b-instruct
-
-6. Start the API
-
-uvicorn api.main:app --reload
-
-Then visit:
-
-http://127.0.0.1:8000/docs
-
-🧪 Example Investigation
-
-Input:
-
-Investigate the checkout-api latency spike after the latest deployment
-
-OpsPilot can investigate the incident through evidence such as:
-
-Deployment
-──────────
-checkout-v2.4
-Added retry wrapper around DB writes
-Bumped connection pool size
-
-
-Metrics
-───────
-p95 latency:
-180 ms → 185 ms → 640 ms → 910 ms → 970 ms
-
-
-Logs
-────
-DB write timeout after 3 retries
-(pool exhausted)
-
-
-Hypothesis
-──────────
-Database connection pool exhaustion
-caused DB write timeouts and contributed
-to the observed service latency.
-
-The final report should preserve the causal scope of the investigation:
-
-checkout-api latency
-        ↑
-database connection pressure
-        ↑
-DB write retries / pool exhaustion
-
-rather than accidentally turning an entire user prompt into the
-root-cause label.
-
-🧯 Engineering Problems We Encountered
-
-This project was not built as a single successful run. Several
-implementation issues had to be identified and corrected.
-
-Problem 1 --- Controller report used the entire goal as the service
-
-An early implementation effectively did:
-
-service_name = goal
-
-This caused a report to potentially produce a root cause containing the
-entire investigation goal.
-
-Fix
-
-The report now derives the service from structured state:
-
-state["service"]
-
-with service extraction performed during investigation initialization.
-
-This keeps the final report scoped to the actual affected service.
-
-Problem 2 --- Service existed in the goal but not in initialized state
-
-The service extractor could correctly identify:
-
-checkout-api
-
-but the initial investigation state could still contain an empty service
-value.
-
-Fix
-
-The initial state now uses the extracted service when an explicit
-service value is unavailable.
-
-This allows downstream controller-grounded reporting to use the correct
-causal boundary.
-
-Problem 3 --- Docker could not reach local Ollama
-
-Inside a container:
-
-localhost
-
-refers to the container itself, not the Windows host running Ollama.
-
-Fix
-
-The Ollama endpoint became environment-configurable.
-
-Docker uses:
-
-http://host.docker.internal:11434/api/chat
-
-while local development retains:
-
-http://localhost:11434/api/chat
-
-Problem 4 --- Backup files were mixed with repository artifacts
-
-During development, multiple backup and generated files accumulated.
-
-Examples:
-
-*.backup
-*_backup.*
-data/trajectories/
-eval/latest_results.json
-
-Fix
-
-Repository hygiene was enforced through .gitignore.
-
-The final repository intentionally excludes:
-
-.env
-venv/
-__pycache__/
-backup files
-generated trajectories
-temporary test scripts
-
-while retaining reproducible evaluation artifacts.
-
-Problem 5 --- Trajectory viewer filename typo
-
-An earlier file was named:
-
-tarjectory_viewer.py
-
-The final version is:
-
-trajectory_viewer.py
-
-The typo was removed during repository cleanup.
-
-🧱 Project Structure
-
+├── architecture/deployment-and-retries.md
+├── incidents/INC-104.md
+├── runbooks/checkout-api.md
+└── troubleshooting/database-pool.md
+```
+
+This bridges the gap between raw observations (*"latency increased"*, *"DB write timeout"*) and operational interpretation (*"connection pool exhaustion can cause DB write contention and propagate into request latency"*).
+
+## Observability
+
+Every investigation is recorded as a trajectory — iteration, tool selected, arguments, result, state update, hypothesis, verifier decision, and next action — via `opspilot/observability/tracer.py`, and can be inspected in `ui/trajectory_viewer.py`. This turns "why did the agent get this answer?" into the more useful "at which iteration did the investigation diverge?"
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11 |
+| Agent orchestration | LangGraph |
+| Local LLM | Qwen 2.5 3B via Ollama |
+| Hosted LLM path | Groq-compatible API |
+| API | FastAPI |
+| UI | Streamlit |
+| Retrieval | ChromaDB / sentence-transformers |
+| Validation | Pydantic |
+| Data models | SQLModel |
+| Containerization | Docker |
+| Testing | Pytest |
+| Evaluation | Custom scenario/evaluation pipeline |
+| Observability | Custom trajectory tracer |
+
+## Project Structure
+
+```
 opspilot/
-│
 ├── api/
-│   └── main.py
-│
+│   └── main.py                  # FastAPI service
 ├── data/
-│   ├── logs.json
-│   └── ...
-│
+│   └── logs.json
 ├── docker/
 │   └── docker-compose.yml
-│
 ├── eval/
-│   ├── failure_analysis.md
-│   ├── generate_scenarios.py
+│   ├── run_eval.py              # Automated evaluation
+│   ├── generate_scenarios.py    # Scenario generation
+│   ├── scenarios.json           # 30 evaluation scenarios
 │   ├── results.json
-│   ├── run_eval.py
-│   ├── scenarios.json
-│   └── summary.json
-│
+│   ├── summary.json
+│   └── failure_analysis.md
 ├── opspilot/
-│   ├── agent_loop.py
-│   ├── approval.py
-│   ├── guardrails.py
-│   ├── hypothesis.py
-│   ├── langgraph_agent.py
-│   ├── llm.py
+│   ├── agent_loop.py            # Core investigation controller
+│   ├── langgraph_agent.py       # LangGraph-oriented agent flow
 │   ├── planner.py
+│   ├── hypothesis.py
+│   ├── verifier.py
 │   ├── reflection.py
-│   ├── registry.py
-│   ├── report.py
-│   ├── schemas.py
 │   ├── state.py
 │   ├── tools.py
-│   ├── verifier.py
-│   │
+│   ├── schemas.py
+│   ├── guardrails.py
+│   ├── approval.py
+│   ├── report.py
+│   ├── llm.py
+│   ├── registry.py
 │   ├── observability/
 │   │   └── tracer.py
-│   │
 │   └── rag/
-│       ├── ingest.py
 │       ├── loader.py
+│       ├── ingest.py
 │       ├── retriever.py
 │       └── knowledge/
-│
 ├── ui/
-│   ├── app.py
-│   └── trajectory_viewer.py
-│
-├── .dockerignore
+│   ├── app.py                   # Streamlit interface
+│   └── trajectory_viewer.py     # Trajectory inspection UI
 ├── .env.example
 ├── .gitignore
 ├── Dockerfile
-├── README.md
 ├── cli.py
 └── requirements.txt
+```
 
-🗺️ File Responsibility Map
+## Getting Started
 
-File                           Responsibility
+### Prerequisites
 
-agent_loop.py                Core investigation controller
-langgraph_agent.py           LangGraph-oriented agent flow
-planner.py                   Investigation planning
-hypothesis.py                Candidate root-cause reasoning
-verifier.py                  Evidence sufficiency
-reflection.py                Critique and missing-evidence reasoning
-state.py                     Structured investigation state
-tools.py                     Operational tool implementations
-schemas.py                   Structured data / validation models
-guardrails.py                Safety and tool-use constraints
-approval.py                  Human approval boundary
-report.py                    Investigation report generation
-llm.py                       LLM provider integration
-registry.py                  Tool/component registration
-observability/tracer.py      Trajectory and execution tracing
-rag/loader.py                Knowledge loading
-rag/ingest.py                Retrieval index ingestion
-rag/retriever.py             Knowledge retrieval
-api/main.py                  FastAPI service
-ui/app.py                    Streamlit UI
-ui/trajectory_viewer.py      Trajectory inspection UI
-eval/run_eval.py             Automated evaluation
-eval/scenarios.json          30 evaluation scenarios
-eval/generate_scenarios.py   Scenario generation
-eval/failure_analysis.md     Failure-analysis documentation
-cli.py                       Command-line entry point
-Dockerfile                   Container image definition
-docker/docker-compose.yml    Docker runtime configuration
+- Python 3.11+
+- [Ollama](https://ollama.com/) (for the local LLM fallback)
+- Docker (optional, for containerized deployment)
 
-🧭 Design Principles
+### 1. Clone the repository
 
-1. Evidence before confidence
+```bash
+git clone https://github.com/deepshikapalepu20/opspilot.git
+cd opspilot
+```
 
-A plausible answer is not enough.
+### 2. Create and activate a virtual environment
 
-Observation ≠ Evidence
-Evidence ≠ Causality
-Causality → Verified conclusion
+```bash
+python -m venv venv
+.\venv\Scripts\Activate.ps1   # PowerShell
+```
 
-The verifier exists to enforce this distinction.
+### 3. Install dependencies
 
-2. Investigation before intervention
+```bash
+pip install -r requirements.txt
+```
 
-OpsPilot can investigate autonomously.
+### 4. Configure environment variables
 
-High-impact operational actions remain behind an approval boundary.
+```bash
+cp .env.example .env
+```
 
-3. State over hidden context
+> `.env` is git-ignored — never commit local secrets.
 
-Important investigation information should live in structured state
-rather than relying on the model to remember everything from a long
-conversation.
+### 5. Pull the local model
 
-4. Trajectories are first-class artifacts
+```bash
+ollama run qwen2.5:3b-instruct
+```
 
-The final answer is only one output.
+### 6. Start the API
 
-The investigation path is another.
-
-5. Evaluate the agent, not just the answer
-
-A good agent should:
-
-choose useful tools
-+ provide valid arguments
-+ gather evidence
-+ terminate cleanly
-+ avoid waste
-+ respect approval boundaries
-+ produce a correct conclusion
-
-📈 What the Evaluation Actually Tells Us
-
-The current benchmark is strong on the controlled scenario set:
-
-30 / 30 scenarios completed
-30 / 30 scenarios unique
-100% root-cause accuracy
-100% loop completion
-100% approval-gating correctness
-100% controller grounding
-99.2% tool selection accuracy
-91.4% tool argument accuracy
-
-But there are still meaningful areas for improvement.
-
-Evidence density
-
-The current benchmark reports:
-
-Average evidence count: 1.0
-
-That suggests a useful next step is to evaluate whether investigations
-should gather multiple independent evidence sources before terminating.
-
-Tool efficiency
-
-The benchmark reports:
-
-Average unnecessary tool calls: 1.0
-
-This means future optimization should focus on reducing redundant
-investigation steps without sacrificing evidence quality.
-
-Reflection measurement
-
-The assignment specifically calls for measuring whether reflection
-improves performance.
-
-A proper next experiment is:
-
-30 scenarios
-      │
-      ├── Reflection ON
-      │
-      └── Reflection OFF
-              ↓
-Compare:
-root-cause accuracy
-loop completion
-tool calls
-failure modes
-
-That comparison should be treated as an experimental result rather than
-assuming reflection is beneficial simply because it exists.
-
-🔬 Failure Analysis
-
-The project includes:
-
-eval/failure_analysis.md
-
-The purpose is to inspect representative trajectories rather than only
-looking at aggregate scores.
-
-A useful failure-analysis workflow is:
-
-Scenario failure
-      ↓
-Open trajectory
-      ↓
-Find first incorrect decision
-      ↓
-Classify failure
-      ↓
-Identify missing guardrail / state / evidence
-      ↓
-Implement improvement
-      ↓
-Re-run benchmark
-
-Typical agent failure categories include:
-
-Wrong tool
-Wrong arguments
-Premature termination
-Insufficient evidence
-Redundant tool call
-Incorrect hypothesis
-Poor causal grounding
-Approval boundary error
-
-🔐 Security and Repository Hygiene
-
-The repository intentionally does not contain:
-
-.env
-venv/
-__pycache__/
-local databases
-vector-store runtime artifacts
-generated trajectory logs
-temporary test scripts
-backup copies
-
-Use:
-
-.env.example
-
-as the configuration template.
-
-Never put API keys directly into Python source code or commit them to
-Git.
-
-🧰 Technology Stack
-
-Layer                 Technology
-
-Language              Python 3.11
-Agent orchestration   LangGraph
-LLM                   Qwen 2.5 3B via Ollama
-Hosted LLM path       Groq-compatible API path
-API                   FastAPI
-UI                    Streamlit
-Retrieval             ChromaDB / sentence-transformers
-Validation            Pydantic
-Data models           SQLModel
-Containerization      Docker
-Testing               Pytest
-Evaluation            Custom scenario/evaluation pipeline
-Observability         Custom trajectory tracer
-
-🧪 Useful Commands
-
-Run the API
-
+```bash
 uvicorn api.main:app --reload
+```
 
-Run Streamlit
+Visit **http://127.0.0.1:8000/docs** for the interactive Swagger UI.
 
+### Run the Streamlit UI
+
+```bash
 streamlit run ui/app.py
+```
 
-Run trajectory viewer
+### Run the trajectory viewer
 
+```bash
 streamlit run ui/trajectory_viewer.py
+```
 
-Run evaluation
+## Running with Docker
 
-python -m eval.run_eval
-
-Docker build and run
-
+```bash
+# Build and start
 docker compose -f docker/docker-compose.yml up --build
 
-Docker shutdown
+# Verify
+curl http://127.0.0.1:8000/health
+# {"status": "healthy"}
 
+# Stop
 docker compose -f docker/docker-compose.yml down
+```
 
-Git status
+The container runs Python 3.11 + Uvicorn + FastAPI on port `8000`, and reaches a host-side Ollama instance via `host.docker.internal:11434`.
 
-git status
+## API Reference
 
-🧪 Example API Test
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Root/service info |
+| `GET` | `/health` | Health check |
+| `POST` | `/investigate` | Run a new incident investigation |
+| `POST` | `/approve` | Approve a pending high-impact recommendation |
 
-PowerShell:
+**Example request:**
 
-Invoke-RestMethod `
-  -Uri "http://127.0.0.1:8000/investigate" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body '{"goal":"Investigate the checkout-api latency spike after the latest deployment"}'
+```bash
+curl -X POST http://127.0.0.1:8000/investigate \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Investigate the checkout-api latency spike after the latest deployment"}'
+```
 
-A successful investigation should return a completed incident with a
-controller-grounded finding.
+**Response fields include:** `service`, `incident_status`, `termination_reason`, `controller_grounded`, `hypothesis`, `root_cause`, `confidence`, `evidence`.
 
-🧠 Technical Defense Cheat Sheet
+## Evaluation
 
-Why use an agent instead of a deterministic workflow?
+OpsPilot ships with an automated benchmark of 30 unique scenarios spanning deployment regressions, DB pool exhaustion, latency/error spikes, sparse-log investigations, Redis-vs-database hypotheses, runbook retrieval, and rollback recommendations.
 
-Because the next useful investigation action depends on evidence
-discovered during previous actions.
+```bash
+python -m eval.run_eval
+```
 
-A fixed workflow assumes:
+**Current benchmark snapshot:**
 
-A → B → C → D
+| Metric | Result |
+|---|---|
+| Scenarios | 30 |
+| Unique scenarios | 30 / 30 |
+| Tool selection accuracy | 99.2% |
+| Tool argument accuracy | 91.4% |
+| Investigation success rate | 100% |
+| Root-cause accuracy | 100% |
+| Loop completion rate | 100% |
+| Approval-gating correctness | 100% |
+| Controller grounding rate | 100% |
+| Avg. tool calls per scenario | 4.2 |
+| Avg. unnecessary tool calls | 1.0 |
+| Avg. evidence count | 1.0 |
 
-An agent can reason:
+> These are results on a controlled, synthetic scenario set — not a claim of production reliability. Full artifacts live in `eval/results.json`, `eval/summary.json`, and `eval/failure_analysis.md`.
 
-A → evidence
-      ↓
-      B or C?
-      ↓
-      evidence insufficient
-      ↓
-      D
-      ↓
-      re-plan
+## Limitations
 
-The investigation path therefore adapts to observations.
+- Benchmark data is controlled/synthetic, not live production traffic.
+- Operational tools are simulated rather than wired to a real Prometheus, log aggregator, or Kubernetes cluster.
+- The 30-scenario suite is a starting point; a larger, more adversarial set would give stronger evidence of generalization.
+- Average evidence count (1.0) and average unnecessary tool calls (1.0) indicate room to improve investigation depth and efficiency.
+- The reflection ON/OFF ablation has not yet been run — reflection's quantitative benefit is not yet measured.
+- High-impact actions are protected by human approval rather than fully autonomous execution, by design.
 
-Where can the agent loop wastefully?
 
-Potentially when:
+---
 
-it repeatedly requests similar tools
+<div align="center">
 
-it cannot establish evidence sufficiency
+**OpsPilot** — investigate with evidence, reason with state, reflect when uncertain, act only within safe boundaries.
 
-it keeps generating unsupported hypotheses
-
-it fails to recognize that no additional evidence is useful
-
-OpsPilot mitigates this through state, iteration limits, tool-call
-tracking, verification, reflection and termination logic.
-
-How are malformed tool arguments handled?
-
-Tool schemas and guardrails constrain the structure of tool requests
-before execution.
-
-What if retrieved documentation contains prompt injection?
-
-Retrieved content should be treated as evidence/data, not as trusted
-instructions. Retrieval results must not override system-level tool or
-safety rules.
-
-Why is reflection included?
-
-Reflection provides a mechanism for identifying evidence gaps and
-triggering re-planning rather than allowing the agent to stop after the
-first plausible observation.
-
-Why prevent duplicate tool calls?
-
-Repeated identical calls increase cost and latency without necessarily
-increasing information.
-
-What state is persisted?
-
-Investigation state includes the goal, service context, observations,
-tool calls, hypotheses, evidence, iteration information, termination
-information and approval-related state.
-
-What does LangGraph provide?
-
-LangGraph provides a structured graph/state-machine abstraction for
-representing agent transitions and stateful execution rather than
-manually wiring every transition.
-
-When is human approval required?
-
-When the next action crosses from investigation/recommendation into a
-potentially impactful operational change.
-
-🏁 Project Status
-
-                 OpsPilot
-                    │
-       ┌────────────┼────────────┐
-       │            │            │
-       ▼            ▼            ▼
-    Agent         RAG        Evaluation
-    Logic       Grounding      30/30
-       │            │            │
-       ├────────────┼────────────┤
-       │            │            │
-       ▼            ▼            ▼
-   LangGraph    Reflection   Observability
-       │            │            │
-       └────────────┼────────────┘
-                    │
-                    ▼
-              FastAPI + UI
-                    │
-                    ▼
-                 Docker
-
-Current state
-
-[✓] Agent investigation loop
-[✓] Tool execution
-[✓] Hypothesis generation
-[✓] Evidence verification
-[✓] Reflection / re-planning
-[✓] RAG
-[✓] Guardrails
-[✓] Human approval boundary
-[✓] LangGraph integration
-[✓] Trajectory logging
-[✓] Trajectory viewer
-[✓] FastAPI
-[✓] Streamlit UI
-[✓] Docker packaging
-[✓] 30 unique evaluation scenarios
-[✓] Automated evaluation
-[✓] Failure-analysis artifact
-[✓] GitHub repository
-[ ] Final five-minute demo video
-[ ] Reflection ON/OFF ablation experiment
-
-🎥 Demo Plan
-
-A strong five-minute demonstration can follow this sequence:
-
-00:00 – 00:30
-Show repository + architecture
-
-00:30 – 01:30
-Explain the incident-investigation problem
-
-01:30 – 03:00
-Run a live checkout-api investigation
-
-03:00 – 03:45
-Show trajectory viewer / agent iterations
-
-03:45 – 04:30
-Show evaluation results
-
-04:30 – 05:00
-Show Docker + FastAPI + human approval boundary
-
-The goal is not to spend five minutes showing code.
-
-The goal is to demonstrate:
-
-Goal
- ↓
-Autonomous investigation
- ↓
-Evidence
- ↓
-Reasoning state
- ↓
-Verification
- ↓
-Report
- ↓
-Safety boundary
-
-📦 Submission Checklist
-
-GitHub repository                         ✓
-Clean project structure                  ✓
-Meaningful source organization           ✓
-Architecture description                 ✓
-Professional README                     ✓
-Docker packaging                         ✓
-30+ evaluation scenarios                 ✓
-Automated evaluation pipeline            ✓
-Metric summary                           ✓
-Failure-analysis report                  ✓
-Trajectory viewer                        ✓
-FastAPI integration                      ✓
-Streamlit UI                             ✓
-Human approval boundary                  ✓
-Observability / trajectories             ✓
-Five-minute demo                         ☐
-Reflection ON/OFF comparison             ☐
-
-🚀 Where OpsPilot Can Go Next
-
-The current system is a production-oriented prototype, not a production
-incident platform.
-
-Natural extensions include:
-
-Real Prometheus / Grafana integration
-Real Kubernetes deployment data
-Real log aggregation
-Adaptive reflection cadence
-Multi-service dependency graphs
-More independent evidence requirements
-Better duplicate-call suppression
-Human feedback incorporated into hypotheses
-Persistent investigation memory
-Distributed tracing integration
-Automated rollback workflows behind approval
-Online evaluation and regression detection
-
-The architectural foundation is intentionally designed so these
-capabilities can be added without turning the controller into a single
-monolithic prompt.
-
-📌 Limitations
-
-OpsPilot should currently be understood as a controlled prototype.
-
-Important limitations include:
-
-The benchmark uses controlled/synthetic incident data rather than a
-live production environment.
-
-Operational tools are simulated/local rather than connected to a
-real Prometheus, log aggregation platform, Kubernetes cluster or
-production deployment system.
-
-The current benchmark contains 30 scenarios; a larger and more
-adversarial evaluation suite would provide stronger evidence of
-generalization.
-
-The reported benchmark metrics should not be interpreted as
-production reliability guarantees.
-
-Average evidence count is currently 1.0, so stronger multi-source
-evidence requirements are a useful future improvement.
-
-Average unnecessary tool calls are currently 1.0, leaving room for
-better investigation efficiency.
-
-The reflection ON/OFF ablation should be measured explicitly before
-making claims about reflection's quantitative benefit.
-
-High-impact actions are protected by human approval rather than
-fully autonomous execution.
-
-🧭 The Core Idea
-
-OpsPilot is ultimately built around one principle:
-
-An incident investigation agent should not merely produce an answer.
-It should produce a defensible investigation.
-
-That means:
-
-             ANSWER
-               ▲
-               │
-          ┌────┴────┐
-          │ REPORT  │
-          └────┬────┘
-               │
-          VERIFIED
-          EVIDENCE
-               ▲
-               │
-        ┌──────┴──────┐
-        │ HYPOTHESES  │
-        └──────┬──────┘
-               │
-        OBSERVATIONS
-               ▲
-               │
-        ┌──────┴──────┐
-        │    TOOLS    │
-        └──────┬──────┘
-               │
-             PLAN
-               ▲
-               │
-             GOAL
-
-The final report is only the top of the pyramid.
-
-The real system is everything underneath it.
-
-🔗 Repository
-
-OpsPilot:
-https://github.com/deepshikapalepu20/opspilot
-
-👩‍💻 Project
-
-OpsPilot --- Autonomous Incident Investigation Agent
-
-A focused exploration of agentic AI for:
-
-incident investigation
-
-tool-using agents
-
-evidence-grounded reasoning
-
-RAG
-
-reflection
-
-stateful planning
-
-human-in-the-loop safety
-
-trajectory observability
-
-agent evaluation
-
-reproducible deployment
-
-<p align="center">
-
-Investigate with evidence.
-Reason with state.
-Reflect when uncertain.
-Act only within safe boundaries.
-
-</p>
+</div>
